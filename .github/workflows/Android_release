@@ -1,0 +1,50 @@
+name: OasisHome Android Release
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build web
+      run: npm run build
+
+    - name: Install Capacitor & Android
+      run: |
+        npm install @capacitor/cli @capacitor/core @capacitor/android
+        npx cap sync android
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: "zulu"
+        java-version: "17"
+
+    - name: Prepare keystore
+      run: |
+        echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+
+    - name: Build Signed Release APK
+      working-directory: android
+      run: |
+        ./gradlew assembleRelease
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: OasisHome-Release-APK
+        path: android/app/build/outputs/apk/release/*.apk
